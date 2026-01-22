@@ -5,7 +5,7 @@ from PIL import Image
 from ultralytics import YOLO
 import pandas as pd
 from datetime import datetime
-import plotly.express as px  # Added for the Risk Assessment charts
+import plotly.express as px  
 
 # --- 1. PAGE CONFIGURATION ---
 st.set_page_config(
@@ -84,11 +84,31 @@ def load_model():
 
 model = load_model()
 
-# --- 4. SIDEBAR NAVIGATION ---
+# --- 4. SIDEBAR NAVIGATION & SAMPLE IMAGES ---
 with st.sidebar:
     st.title("🍀 PestGuard AI")
+    
+    # --- ADDED SECTION: SAMPLE TEST IMAGES ---
     st.markdown("---")
-    # Added "Risk Assessment" to the menu
+    st.subheader("📥 Sample Test Images")
+    st.write("Download these to test the logic:")
+    
+    # Replace the URLs below with your actual RAW GitHub links if they change
+    sample_images = {
+        "Citrus Aphids": "https://raw.githubusercontent.com/meghanakanchiboina-lgtm/PestGuard-AI/main/citrus-aphids.jpg",
+        "Tomato Miner": "https://raw.githubusercontent.com/meghanakanchiboina-lgtm/PestGuard-AI/main/Tomato%20Leaf%20Miner.jpg",
+        "Tomato Healthy": "https://raw.githubusercontent.com/meghanakanchiboina-lgtm/PestGuard-AI/main/tomato%20healthy.jpg",
+        "Lemon Healthy": "https://raw.githubusercontent.com/meghanakanchiboina-lgtm/PestGuard-AI/main/lemon%20healthy.jpg"
+    }
+
+    for name, url in sample_images.items():
+        # Display small preview and raw link
+        st.image(url, caption=name, width=100)
+        st.markdown(f"[Download {name}]({url})")
+    
+    st.markdown("---")
+    # --- END OF ADDED SECTION ---
+
     menu = st.radio("Navigation", ["Home", "Pest Detection", "Risk Assessment", "Analytics Dashboard", "System Explanation"])
     st.markdown("---")
     if st.button("🗑️ Clear All Data"):
@@ -178,12 +198,11 @@ elif menu == "Risk Assessment":
     if not st.session_state['history']:
         st.warning("No data available. Please run a detection first in the 'Pest Detection' page.")
     else:
-        # Process history for categorization
         risk_data = []
         for entry in st.session_state['history']:
             infest = entry['Infestation']
             
-            if infest > 45: # Custom threshold for High Risk
+            if infest > 45: 
                 risk = "High Risk"
                 color = "Red"
             elif infest >= 30:
@@ -202,7 +221,6 @@ elif menu == "Risk Assessment":
         
         risk_df = pd.DataFrame(risk_data)
 
-        # Top Section: Summary Plots
         c1, c2 = st.columns([1, 1])
         with c1:
             st.markdown("### Risk Composition (Pie Chart)")
@@ -225,7 +243,6 @@ elif menu == "Risk Assessment":
             summary.columns = ['Risk Level', 'Count']
             st.table(summary)
 
-        # Bottom Section: Clusters
         st.markdown("---")
         st.markdown("### 📋 Infestation Risk Clusters")
         
@@ -316,7 +333,6 @@ elif menu == "System Explanation":
                         '2. <b>Pheromone Traps:</b> Capture adult moths.<br>'
                         '3. <b>Organic Treatment:</b> Use Spinosad-based sprays.</div>', unsafe_allow_html=True)
             st.markdown('</div>', unsafe_allow_html=True)
-        # HEALTHY PLANT EXPLANATION
         elif "healthy" in last_fname:
             st.markdown('<div class="main-card">', unsafe_allow_html=True)
             st.subheader("🌿 Diagnosis: Optimal Plant Health")
