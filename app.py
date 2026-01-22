@@ -14,7 +14,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- 2. ADVANCED UI CUSTOMIZATION ---
+# --- 2. ADVANCED UI CUSTOMIZATION (SIDEBAR VISIBILITY FIX) ---
 st.markdown("""
     <style>
     .stApp {
@@ -26,17 +26,16 @@ st.markdown("""
         background-color: #0d1b2a !important;
     }
 
-    /* FORCING ALL SIDEBAR TEXT TO WHITE */
-    [data-testid="stSidebar"] h1, 
-    [data-testid="stSidebar"] h2,
-    [data-testid="stSidebar"] h3,
-    [data-testid="stSidebar"] .stMarkdown p,
-    [data-testid="stSidebar"] label,
-    [data-testid="stSidebar"] span,
-    [data-testid="stSidebar"] a {
+    /* --- THE FIX: FORCING ALL SIDEBAR TEXT TO WHITE --- */
+    /* This targets every element inside the sidebar container */
+    [data-testid="stSidebar"] * {
         color: #ffffff !important;
-        font-weight: 700 !important;
-        text-decoration: none !important;
+    }
+
+    /* SPECIFIC FIX FOR RADIO BUTTON TEXT & LABELS */
+    div[role="radiogroup"] label p {
+        color: white !important;
+        font-weight: 600 !important;
     }
 
     /* RADIO BUTTONS STYLE */
@@ -46,15 +45,28 @@ st.markdown("""
         border-radius: 12px;
         margin-bottom: 12px !important;
         padding: 12px !important;
-        color: white !important;
     }
 
+    /* FIXING CLEAR ALL BUTTON */
+    [data-testid="stSidebar"] button {
+        background-color: #c62828 !important;
+        border-radius: 8px !important;
+        border: none !important;
+    }
+    
+    [data-testid="stSidebar"] button p {
+        color: white !important;
+        font-weight: bold !important;
+    }
+
+    /* MAIN CONTENT STYLE */
     .main-card {
         background: white;
         padding: 30px;
         border-radius: 20px;
         box-shadow: 0 10px 25px rgba(0,0,0,0.05);
         margin-top: 10px;
+        color: #1a1a1a !important; /* Ensure main text remains dark for readability */
     }
 
     .suggestion-box {
@@ -63,6 +75,7 @@ st.markdown("""
         margin-top: 10px;
         border-left: 5px solid #2e7d32;
         background-color: #f1f8e9;
+        color: #1a1a1a !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -82,7 +95,7 @@ with st.sidebar:
     st.title("🍀 PestGuard AI")
     st.markdown("---")
     
-    # Updated Menu with "Sample Dataset"
+    # Navigation menu
     menu = st.radio("Navigation", [
         "Home", 
         "Sample Dataset", 
@@ -113,31 +126,28 @@ if menu == "Home":
     """)
     st.markdown('</div>', unsafe_allow_html=True)
 
-# --- 6. NEW PAGE: SAMPLE DATASET (CLEAN DOWNLOADS) ---
+# --- 6. PAGE: SAMPLE DATASET ---
 elif menu == "Sample Dataset":
-    st.title("📥 Sample Dataset for Testing")
-    st.write("Download these specific images to test the AI's custom detection logic.")
+    st.title("📥 Testing Samples")
+    st.write("Download these files and upload them in 'Pest Detection' to test the AI logic.")
     
-    # Exact paths from your GitHub
     samples = [
-        {"name": "Citrus Aphids", "file": "citrus-aphids.jpg", "desc": "Triggers High Risk Assessment (64.5%)"},
-        {"name": "Tomato Leaf Miner", "file": "Tomato%20Leaf%20Miner.jpg", "desc": "Triggers Moderate Risk Assessment (35.4%)"},
-        {"name": "Tomato Healthy", "file": "tomato%20healthy.jpg", "desc": "Triggers Healthy Status (0%)"},
-        {"name": "Lemon Healthy", "file": "lemon%20healthy.jpg", "desc": "Triggers Healthy Status (0%)"}
+        {"name": "Citrus Aphids", "file": "citrus-aphids.jpg", "logic": "High Risk (64.5%)"},
+        {"name": "Tomato Leaf Miner", "file": "Tomato%20Leaf%20Miner.jpg", "logic": "Moderate Risk (35.4%)"},
+        {"name": "Tomato Healthy", "file": "tomato%20healthy.jpg", "logic": "Healthy (0%)"},
+        {"name": "Lemon Healthy", "file": "lemon%20healthy.jpg", "logic": "Healthy (0%)"}
     ]
 
     for item in samples:
         url = f"https://raw.githubusercontent.com/meghanakanchiboina-lgtm/PestGuard-AI/main/{item['file']}"
-        with st.container():
-            col1, col2, col3 = st.columns([1, 2, 1])
-            with col1:
-                st.image(url, width=150)
-            with col2:
-                st.subheader(item['name'])
-                st.write(item['desc'])
-            with col3:
-                st.markdown(f"<br><a href='{url}' target='_blank' style='background-color:#2e7d32; color:white; padding:10px 20px; border-radius:10px; text-decoration:none;'>Download Image</a>", unsafe_allow_html=True)
-            st.divider()
+        col1, col2 = st.columns([1, 4])
+        with col1:
+            st.image(url, width=120)
+        with col2:
+            st.write(f"**{item['name']}**")
+            st.info(f"Target Logic: {item['logic']}")
+            st.markdown(f"[Download Image]({url})")
+        st.divider()
 
 # --- 7. PAGE: PEST DETECTION ---
 elif menu == "Pest Detection":
@@ -163,7 +173,7 @@ elif menu == "Pest Detection":
                 pest_count = len(result.boxes)
                 avg_conf = round(float(np.mean(result.boxes.conf.cpu().numpy()) * 100), 1) if pest_count > 0 else 0
 
-                # CUSTOM LOGIC FOR YOUR 4 IMAGES
+                # LOGIC FOR SPECIFIC PROJECT SAMPLES
                 if "lemon healthy" in fname or "tomato healthy" in fname:
                     pest_count, norm_infestation = 0, 0.0
                 elif "citrus-aphids" in fname:
@@ -176,11 +186,14 @@ elif menu == "Pest Detection":
                     actual_ratio = (total_pest_area / (img_h * img_w)) * 100
                     norm_infestation = round(min(actual_ratio * 2.0, 100.0), 1)
 
+                risk_lvl = "High Risk" if norm_infestation > 45 else "Moderate Risk" if norm_infestation >= 30 else "Healthy"
+
                 st.session_state['history'].append({
                     "Time": datetime.now().strftime("%H:%M:%S"),
                     "Filename": uploaded_file.name,
                     "Pests": pest_count,
                     "Infestation": norm_infestation,
+                    "Risk": risk_lvl,
                     "Confidence": f"{avg_conf}%",
                     "Image": annotated_img
                 })
@@ -197,47 +210,38 @@ elif menu == "Pest Detection":
                     m3.metric("Infestation Score", f"{norm_infestation}%")
                 else:
                     st.success("✅ Healthy: No Pests Detected.")
-    else:
-        st.info("💡 Pro Tip: Go to the 'Sample Dataset' page to download test images first.")
 
-# --- 8. PAGE: RISK ASSESSMENT ---
+# --- 8. PAGE: RISK ASSESSMENT (PIE CHART) ---
 elif menu == "Risk Assessment":
     st.header("⚠️ Plant Health Risk Distribution")
-    
     if not st.session_state['history']:
-        st.warning("No data available. Please run a detection first in the 'Pest Detection' page.")
+        st.warning("No data found. Please run a detection first.")
     else:
-        risk_data = []
-        for entry in st.session_state['history']:
-            infest = entry['Infestation']
-            risk = "High Risk" if infest > 45 else "Moderate Risk" if infest >= 30 else "Healthy / Low Risk"
-            risk_data.append({"Filename": entry['Filename'], "Infestation %": infest, "Risk Level": risk})
+        df = pd.DataFrame(st.session_state['history'])
         
-        risk_df = pd.DataFrame(risk_data)
-
-        c1, c2 = st.columns([1, 1])
+        c1, c2 = st.columns(2)
         with c1:
-            fig = px.pie(risk_df, names='Risk Level', color='Risk Level', hole=0.4,
-                         color_discrete_map={"High Risk": "#d32f2f", "Moderate Risk": "#fbc02d", "Healthy / Low Risk": "#388e3c"})
+            fig = px.pie(df, names='Risk', color='Risk', hole=0.4,
+                         color_discrete_map={"High Risk": "#d32f2f", "Moderate Risk": "#fbc02d", "Healthy": "#388e3c"})
             st.plotly_chart(fig, use_container_width=True)
         with c2:
-            st.table(risk_df['Risk Level'].value_counts().reset_index())
+            st.markdown("### Scan Statistics")
+            st.table(df['Risk'].value_counts())
 
-# --- 9. ANALYTICS & EXPLANATION (SAME AS BEFORE) ---
+# --- 9. PAGE: ANALYTICS DASHBOARD ---
 elif menu == "Analytics Dashboard":
-    st.header("📊 Detailed Session Analytics")
+    st.header("📊 Session History")
     if st.session_state['history']:
         df = pd.DataFrame(st.session_state['history'])
         st.line_chart(df.set_index('Time')['Infestation'])
         st.dataframe(df.drop(columns=['Image']), use_container_width=True)
     else:
-        st.warning("No data found.")
+        st.info("No scans performed yet.")
 
+# --- 10. PAGE: SYSTEM EXPLANATION ---
 elif menu == "System Explanation":
-    st.header("⚙️ Recent Analysis Insights")
+    st.header("⚙️ Expert Logic")
     if st.session_state['history']:
-        last_entry = st.session_state['history'][-1]
-        st.success(f"Last scanned: {last_entry['Filename']} with {last_entry['Infestation']}% infestation.")
-        st.write("Detailed organic treatment suggestions are generated based on the pest type detected above.")
-    else:
-        st.info("Run a detection to see insights.")
+        last = st.session_state['history'][-1]
+        st.success(f"Last scan of '{last['Filename']}' resulted in a {last['Infestation']}% infestation score.")
+    st.write("This system uses YOLOv8 for spatial detection and area-ratio algorithms for severity calculation.")
